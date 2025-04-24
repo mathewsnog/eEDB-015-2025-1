@@ -1,0 +1,57 @@
+{
+  "Comment": "Orquestrador de ingestão de datasets para S3",
+  "StartAt": "IterarDatasets",
+  "States": {
+    "IterarDatasets": {
+      "Type": "Map",
+      "ItemsPath": "$.datasets",
+      "MaxConcurrency": 1,
+      "ItemSelector": {
+        "dataset.$": "$$.Map.Item.Value.dataset",
+        "anos.$": "$$.Map.Item.Value.anos"
+      },
+      "Iterator": {
+        "StartAt": "IterarAnos",
+        "States": {
+          "IterarAnos": {
+            "Type": "Map",
+            "ItemsPath": "$.anos",
+            "MaxConcurrency": 2,
+            "ItemSelector": {
+              "ano.$": "$$.Map.Item.Value",
+              "dataset.$": "$.dataset"
+            },
+            "Iterator": {
+              "StartAt": "ExecutarLambdaIngestao",
+              "States": {
+                "ExecutarLambdaIngestao": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:lambda:us-east-1:549852561886:function:ingestaoteste",
+                  "Parameters": {
+                    "dataset.$": "$.dataset",
+                    "ano.$": "$.ano"
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException"
+                      ],
+                      "IntervalSeconds": 2,
+                      "MaxAttempts": 3,
+                      "BackoffRate": 2
+                    }
+                  ],
+                  "End": true
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

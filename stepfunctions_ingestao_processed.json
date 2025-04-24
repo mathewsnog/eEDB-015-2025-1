@@ -1,0 +1,46 @@
+{
+  "Comment": "Executa Glue Job de Processed para múltiplos datasets e anos",
+  "StartAt": "ParaCadaDataset",
+  "States": {
+    "ParaCadaDataset": {
+      "Type": "Map",
+      "ItemsPath": "$.datasets",
+      "Parameters": {
+        "dataset.$": "$$.Map.Item.Value.dataset",
+        "anos.$": "$$.Map.Item.Value.anos"
+      },
+      "Iterator": {
+        "StartAt": "ParaCadaAno",
+        "States": {
+          "ParaCadaAno": {
+            "Type": "Map",
+            "ItemsPath": "$.anos",
+            "Parameters": {
+              "dataset.$": "$.dataset",
+              "ano.$": "$$.Map.Item.Value"
+            },
+            "Iterator": {
+              "StartAt": "ExecutaGlueJob",
+              "States": {
+                "ExecutaGlueJob": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                  "Parameters": {
+                    "JobName": "processed_transform_params",
+                    "Arguments": {
+                      "--DATASET.$": "$.dataset",
+                      "--ANO.$": "States.Format('{}', $.ano)"
+                    }
+                  },
+                  "End": true
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

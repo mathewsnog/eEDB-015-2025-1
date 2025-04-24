@@ -1,0 +1,46 @@
+{
+  "Comment": "Executa camada Curated para múltiplos datasets e anos",
+  "StartAt": "MapaDatasets",
+  "States": {
+    "MapaDatasets": {
+      "Type": "Map",
+      "ItemsPath": "$.datasets",
+      "Parameters": {
+        "dataset.$": "$$.Map.Item.Value.dataset",
+        "anos.$": "$$.Map.Item.Value.anos"
+      },
+      "Iterator": {
+        "StartAt": "MapaAnos",
+        "States": {
+          "MapaAnos": {
+            "Type": "Map",
+            "ItemsPath": "$.anos",
+            "Parameters": {
+              "dataset.$": "$.dataset",
+              "ano.$": "$$.Map.Item.Value"
+            },
+            "Iterator": {
+              "StartAt": "ExecutaJobCurated",
+              "States": {
+                "ExecutaJobCurated": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                  "Parameters": {
+                    "JobName": "curated_transform_params",
+                    "Arguments": {
+                      "--DATASET.$": "$.dataset",
+                      "--ANO.$": "States.Format('{}', $.ano)"
+                    }
+                  },
+                  "End": true
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}
